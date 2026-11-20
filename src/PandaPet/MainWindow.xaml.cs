@@ -13,7 +13,6 @@ namespace PandaPet;
 
 public partial class MainWindow : Window
 {
-    private const double TaskbarSeatOverlap = 26;
     private readonly AppSettings _settings;
     private readonly SettingsService _settingsService;
     private readonly ReminderScheduler _reminderScheduler;
@@ -101,11 +100,7 @@ public partial class MainWindow : Window
     {
         var workArea = SystemParameters.WorkArea;
         _expandedLeft = workArea.Right - ActualWidth - 12;
-        // The sprite has transparent padding below its feet. Let the transparent
-        // part overlap the taskbar so the visible feet rest on its top edge.
-        Top = Math.Max(
-            workArea.Top + 8,
-            workArea.Bottom - ActualHeight + TaskbarSeatOverlap);
+        Top = Math.Max(workArea.Top + 8, workArea.Bottom - ActualHeight - 8);
         Left = workArea.Right + 8;
 
         var slide = new DoubleAnimation
