@@ -1,0 +1,601 @@
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using PandaPet.Models;
+using PandaPet.Services;
+
+namespace PandaPet;
+
+public partial class MainWindow : Window
+{
+    private readonly AppSettings _settings;
+    private readonly SettingsService _settingsService;
+    private readonly ReminderScheduler _reminderScheduler;
+    private readonly GameTimeTracker _gameTimeTracker;
+    private readonly DispatcherTimer _speechTimer;
+    private readonly DispatcherTimer _singleClickTimer;
+    private readonly ImageSource _idlePandaSource;
+    private readonly BitmapSource[] _actionFrames;
+    private DispatcherTimer? _spriteAnimationTimer;
+    private ReminderItem? _currentReminder;
+    private bool _allowClose;
+    private bool _isExiting;
+    private bool _isCollapsed;
+    private bool _isSadAboutGame;
+    private bool _primaryFrameVisible = true;
+    private double _expandedLeft;
+
+    public MainWindow(AppSettings settings, SettingsService settingsService)
+    {
+        InitializeComponent();
+        _settings = settings;
+        _settingsService = settingsService;
+        _actionFrames = LoadActionFrames();
+        _idlePandaSource = _actionFrames[0];
+        ResetFrameLayers(_idlePandaSource);
+
+        _reminderScheduler = new ReminderScheduler(_settings, _settingsService);
+        _reminderScheduler.ReminderDue += ShowReminder;
+
+        _gameTimeTracker = new GameTimeTracker(_settings, _settingsService);
+        _gameTimeTracker.GameLimitReached += minutes => Dispatcher.Invoke(() =>
+        {
+            ShowSpeech(
+                "Пора немного отдохнуть 🎮",
+                $"{DisplayName}, ты играешь уже около {minutes} минут. Давай разомнёмся и дадим глазам отдохнуть.",
+                showActions: false,
+                autoHide: TimeSpan.FromSeconds(18));
+        });
+        _gameTimeTracker.GameBreakDue += minutes => Dispatcher.Invoke(() =>
+        {
+            ShowSpeech(
+                "Время игрового перерыва 🌿",
+                $"{DisplayName}, прошло ещё {minutes} минут активной игры. Отойдём от экрана, потянемся и попьём воды?",
+                showActions: false,
+                autoHide: TimeSpan.FromSeconds(20));
+        });
+        _gameTimeTracker.GameBreakIgnored += (_, dailyLimitReached) => Dispatcher.Invoke(() =>
+            ShowSadGameMood(dailyLimitReached));
+        _gameTimeTracker.GameBreakTaken += () => Dispatcher.Invoke(ShowHappyAfterBreak);
+
+        _speechTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(8) };
+        _speechTimer.Tick += (_, _) => HideSpeech();
+
+        _singleClickTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(GetDoubleClickTime() + 40)
+        };
+        _singleClickTimer.Tick += (_, _) =>
+        {
+            _singleClickTimer.Stop();
+            PerformRandomInteraction();
+        };
+    }
+
+    private string DisplayName => string.IsNullOrWhiteSpace(_settings.ChildName)
+        ? "друг"
+        : _settings.ChildName.Trim();
+
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        PositionAboveTaskbarAndSlideIn();
+        ((Storyboard)FindResource("IdleAnimation")).Begin(this, true);
+        _reminderScheduler.Start();
+        _gameTimeTracker.Start();
+    }
+
+    private void PositionAboveTaskbarAndSlideIn()
+    {
+        var workArea = SystemParameters.WorkArea;
+        _expandedLeft = workArea.Right - ActualWidth - 12;
+        Top = Math.Max(workArea.Top + 8, workArea.Bottom - ActualHeight - 8);
+        Left = workArea.Right + 8;
+
+        var slide = new DoubleAnimation
+        {
+            From = Left,
+            To = _expandedLeft,
+            Duration = TimeSpan.FromMilliseconds(620),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            FillBehavior = FillBehavior.Stop
+        };
+        slide.Completed += (_, _) => Left = _expandedLeft;
+        BeginAnimation(LeftProperty, slide);
+    }
+
+    public void OpenSettings(bool isFirstRun = false)
+    {
+        var window = new SettingsWindow(_settings, _settingsService, isFirstRun)
+        {
+            Owner = this
+        };
+
+        if (window.ShowDialog() == true)
+        {
+            _reminderScheduler.Refresh();
+            _gameTimeTracker.Refresh();
+            ShowSpeech(
+                $"Приятно познакомиться, {DisplayName}!",
+                "Я буду мягко напоминать о важных делах и перерывах.",
+                showActions: false,
+                autoHide: TimeSpan.FromSeconds(8));
+        }
+    }
+
+    private void ShowReminder(ReminderItem reminder)
+    {
+        Dispatcher.Invoke(() =>
+        {
+            _currentReminder = reminder;
+            ShowSpeech(
+                reminder.Title,
+                $"{DisplayName}, это маленькое напоминание. Отметь дело, когда закончишь.",
+                showActions: true,
+                autoHide: null);
+        });
+    }
+
+    private void ShowSpeech(string title, string detail, bool showActions, TimeSpan? autoHide)
+    {
+        if (_isCollapsed)
+        {
+            ExpandFromEdge();
+        }
+
+        SpeechTitle.Text = title;
+        SpeechDetail.Text = detail;
+        ReminderActions.Visibility = showActions ? Visibility.Visible : Visibility.Collapsed;
+        SpeechCard.Visibility = Visibility.Visible;
+
+        _speechTimer.Stop();
+        if (autoHide.HasValue)
+        {
+            _speechTimer.Interval = autoHide.Value;
+            _speechTimer.Start();
+        }
+    }
+
+    private void HideSpeech()
+    {
+        _speechTimer.Stop();
+        SpeechCard.Visibility = Visibility.Collapsed;
+        _currentReminder = null;
+    }
+
+    private void CompleteReminder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentReminder is not null)
+        {
+            _reminderScheduler.Complete(_currentReminder);
+            _settings.StarCount++;
+            _settingsService.Save(_settings);
+        }
+
+        _currentReminder = null;
+        ShowSpeech(
+            "Отличная работа! ⭐",
+            $"Молодец, {DisplayName}! У тебя уже {_settings.StarCount} звёзд.",
+            showActions: false,
+            autoHide: TimeSpan.FromSeconds(7));
+    }
+
+    private void SnoozeReminder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_currentReminder is not null)
+        {
+            _reminderScheduler.Snooze(_currentReminder, TimeSpan.FromMinutes(5));
+        }
+
+        ShowSpeech(
+            "Хорошо, напомню позже",
+            "Вернусь с этим делом через пять минут.",
+            showActions: false,
+            autoHide: TimeSpan.FromSeconds(5));
+    }
+
+    private void Greeting_Click(object sender, RoutedEventArgs e) => ShowGreeting();
+
+    private void ShowGreeting()
+    {
+        ShowSpeech(
+            $"Привет, {DisplayName}! 👋",
+            "Я рядом. Давай сегодня всё успеем и не забудем отдыхать.",
+            showActions: false,
+            autoHide: TimeSpan.FromSeconds(8));
+    }
+
+    private void TestReminder_Click(object sender, RoutedEventArgs e)
+    {
+        var reminder = _settings.Reminders.FirstOrDefault(r => r.Enabled)
+            ?? AppSettings.CreateDefaults().Reminders[0];
+        ShowReminder(reminder);
+    }
+
+    private void Panda_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount >= 2)
+        {
+            _singleClickTimer.Stop();
+            CollapseToEdge();
+            e.Handled = true;
+            return;
+        }
+
+        _singleClickTimer.Stop();
+        _singleClickTimer.Start();
+        e.Handled = true;
+    }
+
+    private void PerformRandomInteraction()
+    {
+        if (_isSadAboutGame)
+        {
+            ResetFrameLayers(_actionFrames[8]);
+            ShowSpeech(
+                "Я всё ещё жду перерыв 😟",
+                $"{DisplayName}, отойди от игры хотя бы на две минуты. Когда перерыв будет настоящим, я снова повеселею.",
+                showActions: false,
+                autoHide: TimeSpan.FromSeconds(12));
+            return;
+        }
+
+        var phrases = PhraseLibrary.Create(DisplayName);
+
+        var interaction = Random.Shared.Next(phrases.Count);
+        PlayInteractionAnimation(interaction % 4);
+        PlaySpriteAnimation(interaction % 4);
+        var (title, detail) = phrases[interaction];
+
+        ShowSpeech(title, detail, showActions: false, autoHide: TimeSpan.FromSeconds(9));
+    }
+
+    private BitmapSource[] LoadActionFrames()
+    {
+        var sheet = new BitmapImage();
+        sheet.BeginInit();
+        sheet.CacheOption = BitmapCacheOption.OnLoad;
+        sheet.UriSource = new Uri("pack://application:,,,/Assets/panda-actions-sheet-v2.png", UriKind.Absolute);
+        sheet.EndInit();
+        sheet.Freeze();
+
+        var frameWidth = sheet.PixelWidth / 3;
+        var frameHeight = sheet.PixelHeight / 3;
+        var frames = Enumerable.Range(0, 9)
+            .Select(index => new CroppedBitmap(
+                sheet,
+                new Int32Rect(
+                    (index % 3) * frameWidth,
+                    (index / 3) * frameHeight,
+                    frameWidth,
+                    frameHeight)))
+            .ToArray();
+
+        foreach (var frame in frames)
+        {
+            frame.Freeze();
+        }
+
+        return frames;
+    }
+
+    private void PlaySpriteAnimation(int animationKind)
+    {
+        _spriteAnimationTimer?.Stop();
+        var sequences = new[]
+        {
+            new[] { 0, 5, 6, 7, 6, 5, 0 },
+            new[] { 0, 1, 2, 1, 0, 3, 4, 3, 0 },
+            new[] { 0, 5, 6, 5, 0, 1, 2, 1, 0, 3, 4, 3, 0 },
+            new[] { 0, 5, 6, 7, 6, 7, 6, 5, 0 }
+        };
+        var sequence = sequences[animationKind % sequences.Length];
+        var frameIndex = 0;
+        ResetFrameLayers(_actionFrames[sequence[frameIndex]]);
+
+        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
+        _spriteAnimationTimer.Tick += (_, _) =>
+        {
+            frameIndex++;
+            if (frameIndex >= sequence.Length)
+            {
+                _spriteAnimationTimer.Stop();
+                _spriteAnimationTimer = null;
+                CrossFadeTo(_idlePandaSource);
+                return;
+            }
+
+            CrossFadeTo(_actionFrames[sequence[frameIndex]]);
+        };
+        _spriteAnimationTimer.Start();
+    }
+
+    private void CrossFadeTo(ImageSource nextSource)
+    {
+        var outgoing = _primaryFrameVisible ? PandaImage : PandaNextImage;
+        var incoming = _primaryFrameVisible ? PandaNextImage : PandaImage;
+
+        outgoing.BeginAnimation(OpacityProperty, null);
+        incoming.BeginAnimation(OpacityProperty, null);
+        outgoing.Opacity = 1;
+        incoming.Opacity = 0;
+        incoming.Source = nextSource;
+
+        var easing = new SineEase { EasingMode = EasingMode.EaseInOut };
+        outgoing.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(360))
+        {
+            EasingFunction = easing,
+            FillBehavior = FillBehavior.HoldEnd
+        });
+        incoming.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(360))
+        {
+            EasingFunction = easing,
+            FillBehavior = FillBehavior.HoldEnd
+        });
+
+        _primaryFrameVisible = !_primaryFrameVisible;
+    }
+
+    private void ResetFrameLayers(ImageSource source)
+    {
+        PandaImage.BeginAnimation(OpacityProperty, null);
+        PandaNextImage.BeginAnimation(OpacityProperty, null);
+        PandaImage.Source = source;
+        PandaNextImage.Source = source;
+        PandaImage.Opacity = 1;
+        PandaNextImage.Opacity = 0;
+        _primaryFrameVisible = true;
+    }
+
+    private void StopSpriteAnimation()
+    {
+        _spriteAnimationTimer?.Stop();
+        _spriteAnimationTimer = null;
+        ResetFrameLayers(_isSadAboutGame ? _actionFrames[8] : _idlePandaSource);
+    }
+
+    private void PlayInteractionAnimation(int animationKind)
+    {
+        var easing = new SineEase { EasingMode = EasingMode.EaseInOut };
+        switch (animationKind)
+        {
+            case 0:
+                PandaRotate.BeginAnimation(
+                    System.Windows.Media.RotateTransform.AngleProperty,
+                    new DoubleAnimation(-4, 4, TimeSpan.FromMilliseconds(680))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = new RepeatBehavior(2),
+                        FillBehavior = FillBehavior.Stop,
+                        EasingFunction = easing
+                    });
+                break;
+
+            case 1:
+                PandaBob.BeginAnimation(
+                    System.Windows.Media.TranslateTransform.XProperty,
+                    new DoubleAnimation(-9, 9, TimeSpan.FromMilliseconds(720))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = new RepeatBehavior(2),
+                        FillBehavior = FillBehavior.Stop,
+                        EasingFunction = easing
+                    });
+                break;
+
+            case 2:
+                PandaScale.BeginAnimation(
+                    System.Windows.Media.ScaleTransform.ScaleXProperty,
+                    new DoubleAnimation(1, 1.045, TimeSpan.FromMilliseconds(700))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = new RepeatBehavior(2),
+                        FillBehavior = FillBehavior.Stop,
+                        EasingFunction = easing
+                    });
+                PandaRotate.BeginAnimation(
+                    System.Windows.Media.RotateTransform.AngleProperty,
+                    new DoubleAnimation(-3, 3, TimeSpan.FromMilliseconds(700))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = new RepeatBehavior(2),
+                        FillBehavior = FillBehavior.Stop,
+                        EasingFunction = easing
+                    });
+                break;
+
+            default:
+                PandaBob.BeginAnimation(
+                    System.Windows.Media.TranslateTransform.XProperty,
+                    new DoubleAnimation(0, 12, TimeSpan.FromMilliseconds(740))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = new RepeatBehavior(2),
+                        FillBehavior = FillBehavior.Stop,
+                        EasingFunction = easing
+                    });
+                PandaScale.BeginAnimation(
+                    System.Windows.Media.ScaleTransform.ScaleXProperty,
+                    new DoubleAnimation(1, 0.965, TimeSpan.FromMilliseconds(740))
+                    {
+                        AutoReverse = true,
+                        RepeatBehavior = new RepeatBehavior(2),
+                        FillBehavior = FillBehavior.Stop,
+                        EasingFunction = easing
+                    });
+                break;
+        }
+    }
+
+    private void ShowSadGameMood(bool dailyLimitReached)
+    {
+        _isSadAboutGame = true;
+        _spriteAnimationTimer?.Stop();
+        _spriteAnimationTimer = null;
+        ((Storyboard)FindResource("IdleAnimation")).Stop(this);
+        ResetFrameLayers(_actionFrames[8]);
+
+        PandaRotate.BeginAnimation(
+            System.Windows.Media.RotateTransform.AngleProperty,
+            new DoubleAnimation(-1.5, 1.5, TimeSpan.FromSeconds(2.2))
+            {
+                AutoReverse = true,
+                RepeatBehavior = RepeatBehavior.Forever,
+                EasingFunction = new SineEase { EasingMode = EasingMode.EaseInOut }
+            });
+
+        var detail = dailyLimitReached
+            ? $"{DisplayName}, дневной лимит игры уже закончился, а игра всё ещё идёт. Сохранись и отойди от экрана хотя бы на две минуты."
+            : $"{DisplayName}, после напоминания игра продолжается. Мне станет веселее, когда ты сделаешь настоящий двухминутный перерыв.";
+        ShowSpeech(
+            "Панда расстроилась 😟",
+            detail,
+            showActions: false,
+            autoHide: TimeSpan.FromSeconds(25));
+    }
+
+    private void ShowHappyAfterBreak()
+    {
+        _isSadAboutGame = false;
+        PandaRotate.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
+        PandaRotate.Angle = 0;
+        ResetFrameLayers(_idlePandaSource);
+        ((Storyboard)FindResource("IdleAnimation")).Begin(this, true);
+        ShowSpeech(
+            "Перерыв засчитан! 🌿",
+            $"Спасибо, {DisplayName}! Две минуты вне игры прошли — я снова в хорошем настроении.",
+            showActions: false,
+            autoHide: TimeSpan.FromSeconds(9));
+    }
+
+    private void CollapseToEdge()
+    {
+        if (_isCollapsed || _isExiting)
+        {
+            return;
+        }
+
+        _isCollapsed = true;
+        HideSpeech();
+        StopSpriteAnimation();
+        ((Storyboard)FindResource("IdleAnimation")).Stop(this);
+        PandaVisual.Visibility = Visibility.Collapsed;
+        SettingsButton.Visibility = Visibility.Collapsed;
+        CompactTab.Visibility = Visibility.Visible;
+
+        var slide = new DoubleAnimation
+        {
+            To = SystemParameters.WorkArea.Right - 84,
+            Duration = TimeSpan.FromMilliseconds(430),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseInOut },
+            FillBehavior = FillBehavior.Stop
+        };
+        slide.Completed += (_, _) => Left = SystemParameters.WorkArea.Right - 84;
+        BeginAnimation(LeftProperty, slide);
+    }
+
+    private void ExpandFromEdge()
+    {
+        if (!_isCollapsed || _isExiting)
+        {
+            return;
+        }
+
+        _isCollapsed = false;
+        var slide = new DoubleAnimation
+        {
+            To = _expandedLeft,
+            Duration = TimeSpan.FromMilliseconds(500),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut },
+            FillBehavior = FillBehavior.Stop
+        };
+        slide.Completed += (_, _) =>
+        {
+            Left = _expandedLeft;
+            CompactTab.Visibility = Visibility.Collapsed;
+            PandaVisual.Visibility = Visibility.Visible;
+            SettingsButton.Visibility = Visibility.Visible;
+            if (_isSadAboutGame)
+            {
+                ResetFrameLayers(_actionFrames[8]);
+            }
+            else
+            {
+                ((Storyboard)FindResource("IdleAnimation")).Begin(this, true);
+            }
+        };
+        BeginAnimation(LeftProperty, slide);
+    }
+
+    private void CompactTab_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        ExpandFromEdge();
+        e.Handled = true;
+    }
+
+    private void Panda_MouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        PandaVisual.ContextMenu!.IsOpen = true;
+        e.Handled = true;
+    }
+
+    private void Settings_Click(object sender, RoutedEventArgs e)
+    {
+        var parentAccess = new ParentAccessWindow(_settings, _settingsService)
+        {
+            Owner = this
+        };
+
+        if (parentAccess.ShowDialog() == true)
+        {
+            OpenSettings();
+        }
+    }
+
+    private void HideSpeech_Click(object sender, RoutedEventArgs e) => HideSpeech();
+
+    private void Exit_Click(object sender, RoutedEventArgs e) => BeginExitAnimation();
+
+    private void Window_Closing(object? sender, CancelEventArgs e)
+    {
+        if (_allowClose)
+        {
+            _reminderScheduler.Stop();
+            _gameTimeTracker.Stop();
+            return;
+        }
+
+        e.Cancel = true;
+        BeginExitAnimation();
+    }
+
+    private void BeginExitAnimation()
+    {
+        if (_isExiting)
+        {
+            return;
+        }
+
+        _isExiting = true;
+        SpeechCard.Visibility = Visibility.Collapsed;
+        var slide = new DoubleAnimation
+        {
+            To = SystemParameters.WorkArea.Right + 12,
+            Duration = TimeSpan.FromMilliseconds(420),
+            EasingFunction = new CubicEase { EasingMode = EasingMode.EaseIn }
+        };
+        slide.Completed += (_, _) =>
+        {
+            _allowClose = true;
+            Close();
+        };
+        BeginAnimation(LeftProperty, slide);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDoubleClickTime();
+}

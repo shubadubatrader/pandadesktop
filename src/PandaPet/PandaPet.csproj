@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>PandaPet</AssemblyName>
+    <RootNamespace>PandaPet</RootNamespace>
+    <ApplicationIcon>Assets\panda-app-icon.ico</ApplicationIcon>
+    <Product>PandaPet</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Assets\panda-idle.png" />
+    <None Remove="Assets\panda-actions-sheet.png" />
+    <None Remove="Assets\panda-actions-sheet-v2.png" />
+    <None Remove="Assets\panda-app-icon.png" />
+    <Resource Include="Assets\panda-idle.png" />
+    <Resource Include="Assets\panda-actions-sheet.png" />
+    <Resource Include="Assets\panda-actions-sheet-v2.png" />
+    <Resource Include="Assets\panda-app-icon.png" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,141 @@
+<Window x:Class="PandaPet.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Настройки панды"
+        Width="560" Height="690"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#FFF9F0">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock x:Name="HeadingText"
+                       Text="Настройки панды"
+                       Foreground="{StaticResource InkBrush}"
+                       FontSize="27"
+                       FontWeight="Bold" />
+            <TextBlock x:Name="IntroText"
+                       Margin="0,6,0,20"
+                       Text="Расскажите панде, как обращаться к ребёнку. Данные останутся только на этом компьютере."
+                       Foreground="#65736E"
+                       FontSize="14"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="0,0,8,0">
+                <Border Padding="18" CornerRadius="18" Background="White" BorderBrush="#E2ECE8" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Имя ребёнка" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        <TextBox x:Name="ChildNameBox"
+                                 Margin="0,8,0,0"
+                                 MaxLength="40"
+                                 ToolTip="Например: Миша" />
+                        <TextBlock Text="Панда будет использовать имя только в своих репликах."
+                                   Margin="0,6,0,0" FontSize="12" Foreground="#76827E" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="ParentPinCard"
+                        Margin="0,14,0,0" Padding="18"
+                        CornerRadius="18" Background="White"
+                        BorderBrush="#E2ECE8" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Родительский PIN" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        <TextBlock Margin="0,5,0,10"
+                                   Text="Придумайте четыре цифры для входа в настройки."
+                                   FontSize="12" Foreground="#76827E" TextWrapping="Wrap" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox x:Name="ParentPinBox" MaxLength="4" Padding="10,8" FontSize="16" />
+                            <PasswordBox x:Name="ParentPinConfirmBox" Grid.Column="2" MaxLength="4" Padding="10,8" FontSize="16" />
+                        </Grid>
+                        <TextBlock Margin="0,6,0,0" Text="PIN и повтор PIN" FontSize="12" Foreground="#76827E" />
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,14,0,0" Padding="18" CornerRadius="18" Background="White" BorderBrush="#E2ECE8" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Ежедневные напоминания" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        <Grid Margin="0,13,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox x:Name="BackpackEnabledBox" Content="Собрать рюкзак — вс–чт" VerticalAlignment="Center" />
+                            <TextBox x:Name="BackpackTimeBox" Grid.Column="1" MaxLength="5" ToolTip="Время в формате ЧЧ:ММ" />
+                        </Grid>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <CheckBox x:Name="TeethEnabledBox" Content="Почистить зубы — ежедневно" VerticalAlignment="Center" />
+                            <TextBox x:Name="TeethTimeBox" Grid.Column="1" MaxLength="5" IsReadOnly="True" ToolTip="Ежедневно в 21:30" />
+                        </Grid>
+                        <TextBlock Margin="0,10,0,0"
+                                   Text="Рюкзак напоминается только вечером перед учебным днём. В пятницу и субботу панда молчит."
+                                   FontSize="12" Foreground="#76827E" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Margin="0,14,0,0" Padding="18" CornerRadius="18" Background="White" BorderBrush="#E2ECE8" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Игровое время" FontSize="15" FontWeight="SemiBold" Foreground="{StaticResource InkBrush}" />
+                        <Grid Margin="0,12,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Напоминать о перерыве каждые, минут" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <TextBox x:Name="GameBreakIntervalBox" Grid.Column="1" MaxLength="3" />
+                        </Grid>
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="100" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="Дневной лимит активной игры, минут" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <TextBox x:Name="GameLimitBox" Grid.Column="1" MaxLength="4" />
+                        </Grid>
+                        <TextBlock Margin="0,8,0,0"
+                                   Text="Перерыв засчитывается после двух минут вне игры. Если напоминание игнорировать ещё минуту, панда расстроится; после выполненного перерыва она снова повеселеет."
+                                   FontSize="12" Foreground="#76827E" TextWrapping="Wrap" />
+                        <TextBlock Margin="0,12,0,5" Text="Названия игровых процессов — по одному в строке" Foreground="#52615C" />
+                        <TextBox x:Name="GameProcessesBox"
+                                 Height="76"
+                                 AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"
+                                 TextWrapping="NoWrap" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock x:Name="ErrorText"
+                           Margin="4,12,0,0"
+                           Foreground="#C34F4F"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+            <Button x:Name="CancelButton"
+                    Content="Отмена"
+                    Margin="0,0,10,0"
+                    Style="{StaticResource SoftButtonStyle}"
+                    Click="Cancel_Click" />
+            <Button Content="Сохранить"
+                    Style="{StaticResource PrimaryButtonStyle}"
+                    Click="Save_Click" />
+        </StackPanel>
+    </Grid>
+</Window>
