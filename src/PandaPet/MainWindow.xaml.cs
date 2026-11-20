@@ -40,7 +40,7 @@ public partial class MainWindow : Window
         _settingsService = settingsService;
         _headFrames = LoadSpriteFrames("panda-head-sheet-v5.png", 4, 4);
         _pawFrames = LoadSpriteFrames("panda-paws-sheet-v5.png", 4, 4);
-        _winkFrames = LoadSpriteFrames("panda-wink-sheet-v1.png", 4, 4);
+        _winkFrames = LoadSpriteFrames("panda-wink-sheet-v2.png", 4, 4);
         _waveFrames = LoadSpriteFrames("panda-wave-sheet-v1.png", 4, 4);
         _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
         _idlePandaSource = _headFrames[0];

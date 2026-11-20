@@ -24,6 +24,7 @@
     <None Remove="Assets\panda-head-sheet-v5.png" />
     <None Remove="Assets\panda-paws-sheet-v5.png" />
     <None Remove="Assets\panda-wink-sheet-v1.png" />
+    <None Remove="Assets\panda-wink-sheet-v2.png" />
     <None Remove="Assets\panda-wave-sheet-v1.png" />
     <Resource Include="Assets\panda-idle.png" />
     <Resource Include="Assets\panda-actions-sheet.png" />
@@ -36,6 +37,7 @@
     <Resource Include="Assets\panda-head-sheet-v5.png" />
     <Resource Include="Assets\panda-paws-sheet-v5.png" />
     <Resource Include="Assets\panda-wink-sheet-v1.png" />
+    <Resource Include="Assets\panda-wink-sheet-v2.png" />
     <Resource Include="Assets\panda-wave-sheet-v1.png" />
   </ItemGroup>
 
