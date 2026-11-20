@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private readonly BitmapSource[] _pawFrames;
     private readonly BitmapSource[] _winkFrames;
     private readonly BitmapSource[] _waveFrames;
+    private readonly BitmapSource[] _nodFrames;
     private readonly BitmapSource _sadPandaSource;
     private DispatcherTimer? _spriteAnimationTimer;
     private ReminderItem? _currentReminder;
@@ -42,6 +43,7 @@ public partial class MainWindow : Window
         _pawFrames = LoadSpriteFrames("panda-paws-sheet-v5.png", 4, 4);
         _winkFrames = LoadSpriteFrames("panda-wink-sheet-v3.png", 4, 2);
         _waveFrames = LoadSpriteFrames("panda-wave-sheet-v1.png", 4, 4);
+        _nodFrames = LoadSpriteFrames("panda-nod-sheet-v1.png", 4, 4);
         _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
         _idlePandaSource = _headFrames[0];
         ResetFrameLayers(_idlePandaSource);
@@ -255,7 +257,7 @@ public partial class MainWindow : Window
 
         var interaction = Random.Shared.Next(phrases.Count);
         PlayInteractionAnimation();
-        PlaySpriteAnimation(interaction % 4);
+        PlaySpriteAnimation(Random.Shared.Next(6));
         var (title, detail) = phrases[interaction];
 
         ShowSpeech(title, detail, showActions: false, autoHide: TimeSpan.FromSeconds(9));
@@ -299,14 +301,16 @@ public partial class MainWindow : Window
     private void PlaySpriteAnimation(int animationKind)
     {
         _spriteAnimationTimer?.Stop();
-        var frames = (animationKind % 4) switch
+        var frames = (animationKind % 6) switch
         {
-            0 => _pawFrames,
+            0 => _pawFrames.Cast<ImageSource>(),
             1 => _headFrames,
             2 => _winkFrames,
-            _ => _waveFrames
+            3 => _waveFrames,
+            4 => _nodFrames,
+            _ => CreateCheerSequence()
         };
-        var sequence = frames.Cast<ImageSource>().Append(_idlePandaSource).ToArray();
+        var sequence = frames.Append(_idlePandaSource).ToArray();
         var frameIndex = 0;
         ResetFrameLayers(sequence[frameIndex]);
 
@@ -325,6 +329,14 @@ public partial class MainWindow : Window
             DisplayFrame(sequence[frameIndex]);
         };
         _spriteAnimationTimer.Start();
+    }
+
+    private IEnumerable<ImageSource> CreateCheerSequence()
+    {
+        // Движение до верхней позы, два радостных взмаха и плавный возврат.
+        // Используем тот же выровненный лист лап, чтобы масштаб и базовая линия не менялись.
+        int[] indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 10, 11, 10, 11, 12, 13, 14, 15];
+        return indices.Select(index => (ImageSource)_pawFrames[index]);
     }
 
     private void DisplayFrame(ImageSource source)
