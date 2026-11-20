@@ -13,6 +13,7 @@ namespace PandaPet;
 
 public partial class MainWindow : Window
 {
+    private const double TaskbarSeatOverlap = 26;
     private readonly AppSettings _settings;
     private readonly SettingsService _settingsService;
     private readonly ReminderScheduler _reminderScheduler;
@@ -40,7 +41,7 @@ public partial class MainWindow : Window
         _settingsService = settingsService;
         _headFrames = LoadSpriteFrames("panda-head-sheet-v5.png", 4, 4);
         _pawFrames = LoadSpriteFrames("panda-paws-sheet-v5.png", 4, 4);
-        _winkFrames = LoadSpriteFrames("panda-wink-sheet-v2.png", 4, 4);
+        _winkFrames = LoadSpriteFrames("panda-wink-sheet-v3.png", 4, 2);
         _waveFrames = LoadSpriteFrames("panda-wave-sheet-v1.png", 4, 4);
         _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
         _idlePandaSource = _headFrames[0];
@@ -100,7 +101,11 @@ public partial class MainWindow : Window
     {
         var workArea = SystemParameters.WorkArea;
         _expandedLeft = workArea.Right - ActualWidth - 12;
-        Top = Math.Max(workArea.Top + 8, workArea.Bottom - ActualHeight - 8);
+        // The sprite has transparent padding below its feet. Let the transparent
+        // part overlap the taskbar so the visible feet rest on its top edge.
+        Top = Math.Max(
+            workArea.Top + 8,
+            workArea.Bottom - ActualHeight + TaskbarSeatOverlap);
         Left = workArea.Right + 8;
 
         var slide = new DoubleAnimation
