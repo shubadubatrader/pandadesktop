@@ -28,6 +28,7 @@ public partial class MainWindow : Window
     private bool _isCollapsed;
     private bool _isSadAboutGame;
     private bool _primaryFrameVisible = true;
+    private int _frameTransitionVersion;
     private double _expandedLeft;
 
     public MainWindow(AppSettings settings, SettingsService settingsService)
@@ -316,6 +317,7 @@ public partial class MainWindow : Window
 
     private void CrossFadeTo(ImageSource nextSource)
     {
+        var transitionVersion = ++_frameTransitionVersion;
         var outgoing = _primaryFrameVisible ? PandaImage : PandaNextImage;
         var incoming = _primaryFrameVisible ? PandaNextImage : PandaImage;
 
@@ -326,22 +328,33 @@ public partial class MainWindow : Window
         incoming.Source = nextSource;
 
         var easing = new SineEase { EasingMode = EasingMode.EaseInOut };
-        outgoing.BeginAnimation(OpacityProperty, new DoubleAnimation(1, 0, TimeSpan.FromMilliseconds(360))
+        var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320))
         {
             EasingFunction = easing,
             FillBehavior = FillBehavior.HoldEnd
-        });
-        incoming.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(360))
+        };
+        fadeIn.Completed += (_, _) =>
         {
-            EasingFunction = easing,
-            FillBehavior = FillBehavior.HoldEnd
-        });
+            if (transitionVersion != _frameTransitionVersion)
+            {
+                return;
+            }
 
-        _primaryFrameVisible = !_primaryFrameVisible;
+            incoming.BeginAnimation(OpacityProperty, null);
+            outgoing.BeginAnimation(OpacityProperty, null);
+            incoming.Opacity = 1;
+            outgoing.Opacity = 0;
+            _primaryFrameVisible = !_primaryFrameVisible;
+        };
+
+        // Старый кадр остаётся полностью непрозрачным до конца перехода.
+        // Поэтому рабочий стол никогда не просвечивает сквозь панду.
+        incoming.BeginAnimation(OpacityProperty, fadeIn);
     }
 
     private void ResetFrameLayers(ImageSource source)
     {
+        _frameTransitionVersion++;
         PandaImage.BeginAnimation(OpacityProperty, null);
         PandaNextImage.BeginAnimation(OpacityProperty, null);
         PandaImage.Source = source;
