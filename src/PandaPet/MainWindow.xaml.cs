@@ -340,75 +340,24 @@ public partial class MainWindow : Window
 
     private void PlayInteractionAnimation(int animationKind)
     {
+        // Положение персонажа всегда остаётся закреплено по центру.
+        // Выразительность дают промежуточные спрайты головы и лап, а не сдвиг всего изображения.
+        PandaBob.BeginAnimation(System.Windows.Media.TranslateTransform.XProperty, null);
+        PandaBob.X = 0;
+        PandaRotate.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
+        PandaRotate.Angle = 0;
+
         var easing = new SineEase { EasingMode = EasingMode.EaseInOut };
-        switch (animationKind)
-        {
-            case 0:
-                PandaRotate.BeginAnimation(
-                    System.Windows.Media.RotateTransform.AngleProperty,
-                    new DoubleAnimation(-3, 3, TimeSpan.FromMilliseconds(920))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = new RepeatBehavior(2),
-                        FillBehavior = FillBehavior.Stop,
-                        EasingFunction = easing
-                    });
-                break;
-
-            case 1:
-                PandaBob.BeginAnimation(
-                    System.Windows.Media.TranslateTransform.XProperty,
-                    new DoubleAnimation(-6, 6, TimeSpan.FromMilliseconds(960))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = new RepeatBehavior(2),
-                        FillBehavior = FillBehavior.Stop,
-                        EasingFunction = easing
-                    });
-                break;
-
-            case 2:
-                PandaScale.BeginAnimation(
-                    System.Windows.Media.ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(1, 1.03, TimeSpan.FromMilliseconds(940))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = new RepeatBehavior(2),
-                        FillBehavior = FillBehavior.Stop,
-                        EasingFunction = easing
-                    });
-                PandaRotate.BeginAnimation(
-                    System.Windows.Media.RotateTransform.AngleProperty,
-                    new DoubleAnimation(-2.5, 2.5, TimeSpan.FromMilliseconds(940))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = new RepeatBehavior(2),
-                        FillBehavior = FillBehavior.Stop,
-                        EasingFunction = easing
-                    });
-                break;
-
-            default:
-                PandaBob.BeginAnimation(
-                    System.Windows.Media.TranslateTransform.XProperty,
-                    new DoubleAnimation(0, 8, TimeSpan.FromMilliseconds(980))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = new RepeatBehavior(2),
-                        FillBehavior = FillBehavior.Stop,
-                        EasingFunction = easing
-                    });
-                PandaScale.BeginAnimation(
-                    System.Windows.Media.ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(1, 0.98, TimeSpan.FromMilliseconds(980))
-                    {
-                        AutoReverse = true,
-                        RepeatBehavior = new RepeatBehavior(2),
-                        FillBehavior = FillBehavior.Stop,
-                        EasingFunction = easing
-                    });
-                break;
-        }
+        var scaleTo = animationKind % 2 == 0 ? 1.018 : 0.985;
+        PandaScale.BeginAnimation(
+            System.Windows.Media.ScaleTransform.ScaleXProperty,
+            new DoubleAnimation(1, scaleTo, TimeSpan.FromMilliseconds(1200))
+            {
+                AutoReverse = true,
+                RepeatBehavior = new RepeatBehavior(1),
+                FillBehavior = FillBehavior.Stop,
+                EasingFunction = easing
+            });
     }
 
     private void ShowSadGameMood(bool dailyLimitReached)
