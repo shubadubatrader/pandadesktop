@@ -27,8 +27,6 @@ public partial class MainWindow : Window
     private bool _isExiting;
     private bool _isCollapsed;
     private bool _isSadAboutGame;
-    private bool _primaryFrameVisible = true;
-    private int _frameTransitionVersion;
     private double _expandedLeft;
 
     public MainWindow(AppSettings settings, SettingsService settingsService)
@@ -298,7 +296,7 @@ public partial class MainWindow : Window
         var frameIndex = 0;
         ResetFrameLayers(_actionFrames[sequence[frameIndex]]);
 
-        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(420) };
+        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(140) };
         _spriteAnimationTimer.Tick += (_, _) =>
         {
             frameIndex++;
@@ -306,62 +304,24 @@ public partial class MainWindow : Window
             {
                 _spriteAnimationTimer.Stop();
                 _spriteAnimationTimer = null;
-                CrossFadeTo(_idlePandaSource);
+                DisplayFrame(_idlePandaSource);
                 return;
             }
 
-            CrossFadeTo(_actionFrames[sequence[frameIndex]]);
+            DisplayFrame(_actionFrames[sequence[frameIndex]]);
         };
         _spriteAnimationTimer.Start();
     }
 
-    private void CrossFadeTo(ImageSource nextSource)
+    private void DisplayFrame(ImageSource source)
     {
-        var transitionVersion = ++_frameTransitionVersion;
-        var outgoing = _primaryFrameVisible ? PandaImage : PandaNextImage;
-        var incoming = _primaryFrameVisible ? PandaNextImage : PandaImage;
-
-        outgoing.BeginAnimation(OpacityProperty, null);
-        incoming.BeginAnimation(OpacityProperty, null);
-        outgoing.Opacity = 1;
-        incoming.Opacity = 0;
-        incoming.Source = nextSource;
-
-        var easing = new SineEase { EasingMode = EasingMode.EaseInOut };
-        var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(320))
-        {
-            EasingFunction = easing,
-            FillBehavior = FillBehavior.HoldEnd
-        };
-        fadeIn.Completed += (_, _) =>
-        {
-            if (transitionVersion != _frameTransitionVersion)
-            {
-                return;
-            }
-
-            incoming.BeginAnimation(OpacityProperty, null);
-            outgoing.BeginAnimation(OpacityProperty, null);
-            incoming.Opacity = 1;
-            outgoing.Opacity = 0;
-            _primaryFrameVisible = !_primaryFrameVisible;
-        };
-
-        // Старый кадр остаётся полностью непрозрачным до конца перехода.
-        // Поэтому рабочий стол никогда не просвечивает сквозь панду.
-        incoming.BeginAnimation(OpacityProperty, fadeIn);
+        PandaImage.Source = source;
+        PandaImage.Opacity = 1;
     }
 
     private void ResetFrameLayers(ImageSource source)
     {
-        _frameTransitionVersion++;
-        PandaImage.BeginAnimation(OpacityProperty, null);
-        PandaNextImage.BeginAnimation(OpacityProperty, null);
-        PandaImage.Source = source;
-        PandaNextImage.Source = source;
-        PandaImage.Opacity = 1;
-        PandaNextImage.Opacity = 0;
-        _primaryFrameVisible = true;
+        DisplayFrame(source);
     }
 
     private void StopSpriteAnimation()

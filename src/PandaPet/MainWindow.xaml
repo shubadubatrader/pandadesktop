@@ -143,11 +143,6 @@
                    Source="/Assets/panda-idle.png"
                    Stretch="Uniform"
                    Opacity="1" />
-            <Image x:Name="PandaNextImage"
-                   Source="/Assets/panda-idle.png"
-                   Stretch="Uniform"
-                   Opacity="0"
-                   IsHitTestVisible="False" />
 
             <Grid.ContextMenu>
                 <ContextMenu>
