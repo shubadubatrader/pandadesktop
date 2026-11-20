@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private readonly ImageSource _idlePandaSource;
     private readonly BitmapSource[] _headFrames;
     private readonly BitmapSource[] _pawFrames;
+    private readonly BitmapSource[] _winkFrames;
+    private readonly BitmapSource[] _waveFrames;
     private readonly BitmapSource _sadPandaSource;
     private DispatcherTimer? _spriteAnimationTimer;
     private ReminderItem? _currentReminder;
@@ -38,6 +40,8 @@ public partial class MainWindow : Window
         _settingsService = settingsService;
         _headFrames = LoadSpriteFrames("panda-head-sheet-v5.png", 4, 4);
         _pawFrames = LoadSpriteFrames("panda-paws-sheet-v5.png", 4, 4);
+        _winkFrames = LoadSpriteFrames("panda-wink-sheet-v1.png", 4, 4);
+        _waveFrames = LoadSpriteFrames("panda-wave-sheet-v1.png", 4, 4);
         _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
         _idlePandaSource = _headFrames[0];
         ResetFrameLayers(_idlePandaSource);
@@ -295,15 +299,18 @@ public partial class MainWindow : Window
     private void PlaySpriteAnimation(int animationKind)
     {
         _spriteAnimationTimer?.Stop();
-        var sequence = (animationKind % 4) switch
+        var frames = (animationKind % 4) switch
         {
-            0 or 2 => _pawFrames.Append(_pawFrames[0]).ToArray(),
-            _ => _headFrames.Append(_headFrames[0]).ToArray()
+            0 => _pawFrames,
+            1 => _headFrames,
+            2 => _winkFrames,
+            _ => _waveFrames
         };
+        var sequence = frames.Cast<ImageSource>().Append(_idlePandaSource).ToArray();
         var frameIndex = 0;
         ResetFrameLayers(sequence[frameIndex]);
 
-        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(136) };
+        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(122) };
         _spriteAnimationTimer.Tick += (_, _) =>
         {
             frameIndex++;
