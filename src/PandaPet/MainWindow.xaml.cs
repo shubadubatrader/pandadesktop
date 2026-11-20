@@ -36,8 +36,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         _settings = settings;
         _settingsService = settingsService;
-        _headFrames = LoadSpriteFrames("panda-head-sheet-v3.png", 4, 4);
-        _pawFrames = LoadSpriteFrames("panda-paws-sheet-v3.png", 4, 4);
+        _headFrames = LoadSpriteFrames("panda-head-sheet-v4.png", 4, 4);
+        _pawFrames = LoadSpriteFrames("panda-paws-sheet-v4.png", 4, 4);
         _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
         _idlePandaSource = _headFrames[0];
         ResetFrameLayers(_idlePandaSource);
@@ -303,7 +303,7 @@ public partial class MainWindow : Window
         var frameIndex = 0;
         ResetFrameLayers(sequence[frameIndex]);
 
-        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(170) };
+        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(136) };
         _spriteAnimationTimer.Tick += (_, _) =>
         {
             frameIndex++;
@@ -351,7 +351,7 @@ public partial class MainWindow : Window
         var scaleTo = animationKind % 2 == 0 ? 1.018 : 0.985;
         PandaScale.BeginAnimation(
             System.Windows.Media.ScaleTransform.ScaleXProperty,
-            new DoubleAnimation(1, scaleTo, TimeSpan.FromMilliseconds(1200))
+            new DoubleAnimation(1, scaleTo, TimeSpan.FromMilliseconds(960))
             {
                 AutoReverse = true,
                 RepeatBehavior = new RepeatBehavior(1),

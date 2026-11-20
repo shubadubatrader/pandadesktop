@@ -15,14 +15,14 @@
         <Storyboard x:Key="IdleAnimation" RepeatBehavior="Forever" AutoReverse="True">
             <DoubleAnimation Storyboard.TargetName="PandaBob"
                              Storyboard.TargetProperty="Y"
-                             From="0" To="-4" Duration="0:0:3.0">
+                             From="0" To="-4" Duration="0:0:2.4">
                 <DoubleAnimation.EasingFunction>
                     <SineEase EasingMode="EaseInOut" />
                 </DoubleAnimation.EasingFunction>
             </DoubleAnimation>
             <DoubleAnimation Storyboard.TargetName="PandaScale"
                              Storyboard.TargetProperty="ScaleY"
-                             From="1" To="1.006" Duration="0:0:3.0" />
+                             From="1" To="1.006" Duration="0:0:2.4" />
         </Storyboard>
     </Window.Resources>
 
