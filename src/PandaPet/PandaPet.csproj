@@ -21,6 +21,8 @@
     <None Remove="Assets\panda-paws-sheet-v3.png" />
     <None Remove="Assets\panda-head-sheet-v4.png" />
     <None Remove="Assets\panda-paws-sheet-v4.png" />
+    <None Remove="Assets\panda-head-sheet-v5.png" />
+    <None Remove="Assets\panda-paws-sheet-v5.png" />
     <Resource Include="Assets\panda-idle.png" />
     <Resource Include="Assets\panda-actions-sheet.png" />
     <Resource Include="Assets\panda-actions-sheet-v2.png" />
@@ -29,6 +31,8 @@
     <Resource Include="Assets\panda-paws-sheet-v3.png" />
     <Resource Include="Assets\panda-head-sheet-v4.png" />
     <Resource Include="Assets\panda-paws-sheet-v4.png" />
+    <Resource Include="Assets\panda-head-sheet-v5.png" />
+    <Resource Include="Assets\panda-paws-sheet-v5.png" />
   </ItemGroup>
 
 </Project>

@@ -36,8 +36,8 @@ public partial class MainWindow : Window
         InitializeComponent();
         _settings = settings;
         _settingsService = settingsService;
-        _headFrames = LoadSpriteFrames("panda-head-sheet-v4.png", 4, 4);
-        _pawFrames = LoadSpriteFrames("panda-paws-sheet-v4.png", 4, 4);
+        _headFrames = LoadSpriteFrames("panda-head-sheet-v5.png", 4, 4);
+        _pawFrames = LoadSpriteFrames("panda-paws-sheet-v5.png", 4, 4);
         _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
         _idlePandaSource = _headFrames[0];
         ResetFrameLayers(_idlePandaSource);
@@ -250,7 +250,7 @@ public partial class MainWindow : Window
         var phrases = PhraseLibrary.Create(DisplayName);
 
         var interaction = Random.Shared.Next(phrases.Count);
-        PlayInteractionAnimation(interaction % 4);
+        PlayInteractionAnimation();
         PlaySpriteAnimation(interaction % 4);
         var (title, detail) = phrases[interaction];
 
@@ -338,7 +338,7 @@ public partial class MainWindow : Window
         ResetFrameLayers(_isSadAboutGame ? _sadPandaSource : _idlePandaSource);
     }
 
-    private void PlayInteractionAnimation(int animationKind)
+    private void PlayInteractionAnimation()
     {
         // Положение персонажа всегда остаётся закреплено по центру.
         // Выразительность дают промежуточные спрайты головы и лап, а не сдвиг всего изображения.
@@ -347,17 +347,10 @@ public partial class MainWindow : Window
         PandaRotate.BeginAnimation(System.Windows.Media.RotateTransform.AngleProperty, null);
         PandaRotate.Angle = 0;
 
-        var easing = new SineEase { EasingMode = EasingMode.EaseInOut };
-        var scaleTo = animationKind % 2 == 0 ? 1.018 : 0.985;
-        PandaScale.BeginAnimation(
-            System.Windows.Media.ScaleTransform.ScaleXProperty,
-            new DoubleAnimation(1, scaleTo, TimeSpan.FromMilliseconds(960))
-            {
-                AutoReverse = true,
-                RepeatBehavior = new RepeatBehavior(1),
-                FillBehavior = FillBehavior.Stop,
-                EasingFunction = easing
-            });
+        // Масштаб во время действия не меняется: иначе даже небольшое сжатие
+        // заметно при переключении между спокойной позой и серией кадров.
+        PandaScale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, null);
+        PandaScale.ScaleX = 1;
     }
 
     private void ShowSadGameMood(bool dailyLimitReached)

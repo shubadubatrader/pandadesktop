@@ -17,7 +17,22 @@ if ($installDirectory -ne $expectedInstallDirectory) {
     throw "Небезопасный путь установки: $installDirectory"
 }
 
-Get-Process -Name PandaPet -ErrorAction SilentlyContinue | Stop-Process -Force
+$runningProcesses = @(Get-Process -Name PandaPet -ErrorAction SilentlyContinue)
+if ($runningProcesses.Count -gt 0) {
+    $runningProcesses | Stop-Process -Force
+    foreach ($process in $runningProcesses) {
+        try {
+            $process.WaitForExit(5000) | Out-Null
+        }
+        catch {
+            # Процесс уже завершён и объект мог быть освобождён системой.
+        }
+    }
+}
+
+if (Get-Process -Name PandaPet -ErrorAction SilentlyContinue) {
+    throw 'Не удалось завершить запущенный PandaPet перед обновлением.'
+}
 New-Item -ItemType Directory -Path $installDirectory -Force | Out-Null
 
 $installedExe = Join-Path $installDirectory 'PandaPet.exe'
