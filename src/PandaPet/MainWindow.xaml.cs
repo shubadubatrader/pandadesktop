@@ -20,7 +20,9 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _speechTimer;
     private readonly DispatcherTimer _singleClickTimer;
     private readonly ImageSource _idlePandaSource;
-    private readonly BitmapSource[] _actionFrames;
+    private readonly BitmapSource[] _headFrames;
+    private readonly BitmapSource[] _pawFrames;
+    private readonly BitmapSource _sadPandaSource;
     private DispatcherTimer? _spriteAnimationTimer;
     private ReminderItem? _currentReminder;
     private bool _allowClose;
@@ -34,8 +36,10 @@ public partial class MainWindow : Window
         InitializeComponent();
         _settings = settings;
         _settingsService = settingsService;
-        _actionFrames = LoadActionFrames();
-        _idlePandaSource = _actionFrames[0];
+        _headFrames = LoadSpriteFrames("panda-head-sheet-v3.png", 4, 4);
+        _pawFrames = LoadSpriteFrames("panda-paws-sheet-v3.png", 4, 4);
+        _sadPandaSource = LoadSpriteFrames("panda-actions-sheet-v2.png", 3, 3)[8];
+        _idlePandaSource = _headFrames[0];
         ResetFrameLayers(_idlePandaSource);
 
         _reminderScheduler = new ReminderScheduler(_settings, _settingsService);
@@ -234,7 +238,7 @@ public partial class MainWindow : Window
     {
         if (_isSadAboutGame)
         {
-            ResetFrameLayers(_actionFrames[8]);
+            ResetFrameLayers(_sadPandaSource);
             ShowSpeech(
                 "Я всё ещё жду перерыв 😟",
                 $"{DisplayName}, отойди от игры хотя бы на две минуты. Когда перерыв будет настоящим, я снова повеселею.",
@@ -253,23 +257,29 @@ public partial class MainWindow : Window
         ShowSpeech(title, detail, showActions: false, autoHide: TimeSpan.FromSeconds(9));
     }
 
-    private BitmapSource[] LoadActionFrames()
+    private static BitmapSource[] LoadSpriteFrames(string assetName, int columns, int rows)
     {
         var sheet = new BitmapImage();
         sheet.BeginInit();
         sheet.CacheOption = BitmapCacheOption.OnLoad;
-        sheet.UriSource = new Uri("pack://application:,,,/Assets/panda-actions-sheet-v2.png", UriKind.Absolute);
+        sheet.UriSource = new Uri($"pack://application:,,,/Assets/{assetName}", UriKind.Absolute);
         sheet.EndInit();
         sheet.Freeze();
 
-        var frameWidth = sheet.PixelWidth / 3;
-        var frameHeight = sheet.PixelHeight / 3;
-        var frames = Enumerable.Range(0, 9)
+        if (sheet.PixelWidth % columns != 0 || sheet.PixelHeight % rows != 0)
+        {
+            throw new InvalidOperationException(
+                $"Лист {assetName} нельзя ровно разделить на сетку {columns}x{rows}.");
+        }
+
+        var frameWidth = sheet.PixelWidth / columns;
+        var frameHeight = sheet.PixelHeight / rows;
+        var frames = Enumerable.Range(0, columns * rows)
             .Select(index => new CroppedBitmap(
                 sheet,
                 new Int32Rect(
-                    (index % 3) * frameWidth,
-                    (index / 3) * frameHeight,
+                    (index % columns) * frameWidth,
+                    (index / columns) * frameHeight,
                     frameWidth,
                     frameHeight)))
             .ToArray();
@@ -285,18 +295,15 @@ public partial class MainWindow : Window
     private void PlaySpriteAnimation(int animationKind)
     {
         _spriteAnimationTimer?.Stop();
-        var sequences = new[]
+        var sequence = (animationKind % 4) switch
         {
-            new[] { 0, 5, 6, 7, 6, 5, 0 },
-            new[] { 0, 1, 2, 1, 0, 3, 4, 3, 0 },
-            new[] { 0, 5, 6, 5, 0, 1, 2, 1, 0, 3, 4, 3, 0 },
-            new[] { 0, 5, 6, 7, 6, 7, 6, 5, 0 }
+            0 or 2 => _pawFrames.Append(_pawFrames[0]).ToArray(),
+            _ => _headFrames.Append(_headFrames[0]).ToArray()
         };
-        var sequence = sequences[animationKind % sequences.Length];
         var frameIndex = 0;
-        ResetFrameLayers(_actionFrames[sequence[frameIndex]]);
+        ResetFrameLayers(sequence[frameIndex]);
 
-        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(140) };
+        _spriteAnimationTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(170) };
         _spriteAnimationTimer.Tick += (_, _) =>
         {
             frameIndex++;
@@ -308,7 +315,7 @@ public partial class MainWindow : Window
                 return;
             }
 
-            DisplayFrame(_actionFrames[sequence[frameIndex]]);
+            DisplayFrame(sequence[frameIndex]);
         };
         _spriteAnimationTimer.Start();
     }
@@ -328,7 +335,7 @@ public partial class MainWindow : Window
     {
         _spriteAnimationTimer?.Stop();
         _spriteAnimationTimer = null;
-        ResetFrameLayers(_isSadAboutGame ? _actionFrames[8] : _idlePandaSource);
+        ResetFrameLayers(_isSadAboutGame ? _sadPandaSource : _idlePandaSource);
     }
 
     private void PlayInteractionAnimation(int animationKind)
@@ -339,7 +346,7 @@ public partial class MainWindow : Window
             case 0:
                 PandaRotate.BeginAnimation(
                     System.Windows.Media.RotateTransform.AngleProperty,
-                    new DoubleAnimation(-4, 4, TimeSpan.FromMilliseconds(680))
+                    new DoubleAnimation(-3, 3, TimeSpan.FromMilliseconds(920))
                     {
                         AutoReverse = true,
                         RepeatBehavior = new RepeatBehavior(2),
@@ -351,7 +358,7 @@ public partial class MainWindow : Window
             case 1:
                 PandaBob.BeginAnimation(
                     System.Windows.Media.TranslateTransform.XProperty,
-                    new DoubleAnimation(-9, 9, TimeSpan.FromMilliseconds(720))
+                    new DoubleAnimation(-6, 6, TimeSpan.FromMilliseconds(960))
                     {
                         AutoReverse = true,
                         RepeatBehavior = new RepeatBehavior(2),
@@ -363,7 +370,7 @@ public partial class MainWindow : Window
             case 2:
                 PandaScale.BeginAnimation(
                     System.Windows.Media.ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(1, 1.045, TimeSpan.FromMilliseconds(700))
+                    new DoubleAnimation(1, 1.03, TimeSpan.FromMilliseconds(940))
                     {
                         AutoReverse = true,
                         RepeatBehavior = new RepeatBehavior(2),
@@ -372,7 +379,7 @@ public partial class MainWindow : Window
                     });
                 PandaRotate.BeginAnimation(
                     System.Windows.Media.RotateTransform.AngleProperty,
-                    new DoubleAnimation(-3, 3, TimeSpan.FromMilliseconds(700))
+                    new DoubleAnimation(-2.5, 2.5, TimeSpan.FromMilliseconds(940))
                     {
                         AutoReverse = true,
                         RepeatBehavior = new RepeatBehavior(2),
@@ -384,7 +391,7 @@ public partial class MainWindow : Window
             default:
                 PandaBob.BeginAnimation(
                     System.Windows.Media.TranslateTransform.XProperty,
-                    new DoubleAnimation(0, 12, TimeSpan.FromMilliseconds(740))
+                    new DoubleAnimation(0, 8, TimeSpan.FromMilliseconds(980))
                     {
                         AutoReverse = true,
                         RepeatBehavior = new RepeatBehavior(2),
@@ -393,7 +400,7 @@ public partial class MainWindow : Window
                     });
                 PandaScale.BeginAnimation(
                     System.Windows.Media.ScaleTransform.ScaleXProperty,
-                    new DoubleAnimation(1, 0.965, TimeSpan.FromMilliseconds(740))
+                    new DoubleAnimation(1, 0.98, TimeSpan.FromMilliseconds(980))
                     {
                         AutoReverse = true,
                         RepeatBehavior = new RepeatBehavior(2),
@@ -410,7 +417,7 @@ public partial class MainWindow : Window
         _spriteAnimationTimer?.Stop();
         _spriteAnimationTimer = null;
         ((Storyboard)FindResource("IdleAnimation")).Stop(this);
-        ResetFrameLayers(_actionFrames[8]);
+        ResetFrameLayers(_sadPandaSource);
 
         PandaRotate.BeginAnimation(
             System.Windows.Media.RotateTransform.AngleProperty,
@@ -494,7 +501,7 @@ public partial class MainWindow : Window
             SettingsButton.Visibility = Visibility.Visible;
             if (_isSadAboutGame)
             {
-                ResetFrameLayers(_actionFrames[8]);
+                ResetFrameLayers(_sadPandaSource);
             }
             else
             {
